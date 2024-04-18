@@ -8,8 +8,12 @@ from util import write_csv
 import uuid
 import os
 import av
-
-os.system('fswebcam -r 640x480 test_imgs/img.jpg')
+import time
+# settings for button
+import RPi.GPIO as GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 folder_path = "./licenses_plates_imgs_detected/"
 LICENSE_MODEL_DETECTION_DIR = './models/license_plate_detector.pt'
@@ -21,40 +25,6 @@ vehicles = [2]
 
 coco_model = YOLO(COCO_MODEL_DIR)
 license_plate_detector = YOLO(LICENSE_MODEL_DETECTION_DIR)
-
-
-# threshold = 0.15
-"""
-class VideoProcessor:
-    def recv(self, frame) :
-        img = frame.to_ndarray(format="bgr24")
-        img_to_an = img.copy()
-        img_to_an = cv2.cvtColor(img_to_an, cv2.COLOR_RGB2BGR)
-        license_detections = license_plate_detector(img_to_an)[0]
-
-        if len(license_detections.boxes.cls.tolist()) != 0 :
-            for license_plate in license_detections.boxes.data.tolist() :
-                x1, y1, x2, y2, score, class_id = license_plate
-
-                cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)
-
-                license_plate_crop = img[int(y1):int(y2), int(x1): int(x2), :]
-            
-                license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY) 
-
-                license_plate_text, license_plate_text_score = read_license_plate(license_plate_crop_gray, img)
-
-                cv2.rectangle(img, (int(x1) - 40, int(y1) - 40), (int(x2) + 40, int(y1)), (255, 255, 255), cv2.FILLED)
-                cv2.putText(img,
-                            str(license_plate_text),
-                            (int((int(x1) + int(x2)) / 2) - 70, int(y1) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 0, 0),
-                            3)
-
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-"""  
 
 def read_license_plate(license_plate_crop, img):
     scores = 0
@@ -139,19 +109,36 @@ def model_prediction(img):
 
         img_wth_box = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-        return [img_wth_box, licenses_texts, license_plate_crops_total]
+        return [img_wth_box, licenses_texts, license_plate_crops_total, car_score]
     
-    else : 
+    else: 
         img_wth_box = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return [img_wth_box]
-    
-img = np.array(Image.open("test_imgs/img.jpg"))
-results = model_prediction(img)
-texts = results[1]
 
-file = open('csv_detections/detection_results.csv')
-csv_reader = csv.reader(file)
-csv_data = list(csv_reader)
-license_plate_text = csv_data[1][5]
-license_plate_score = csv_data[1][6]
-print(license_plate_text, license_plate_score)
+
+while True:
+    f = open('csv_detections/detection_results.csv', "w+")
+    f.close()
+    
+    if GPIO.input(17) != GPIO.HIGH:
+        os.system('fswebcam -r 640x480 test_imgs/img.jpg')
+
+        img = np.array(Image.open("test_imgs/img.jpg"))
+        results = model_prediction(img)
+        if len(results) == 1:
+            print('plate not detected')
+            continue
+        else:
+            if results[-1] == 0:
+                print('Car was not detected')
+                continue
+            file = open('csv_detections/detection_results.csv')
+            csv_reader = csv.reader(file)
+            csv_data = list(csv_reader)
+            license_plate_text = csv_data[1][5]
+            license_plate_score = csv_data[1][6]
+            print(license_plate_text, license_plate_score)
+
+            while (GPIO.input(17) == GPIO.LOW):
+                print('pustito !')
+            time.sleep(0.5)
