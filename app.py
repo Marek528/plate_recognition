@@ -11,9 +11,17 @@ import av
 import time
 # settings for button
 import RPi.GPIO as GPIO
+ir_pin = 17
+ir_pin_2 = 27
+BUTTON_PIN = 22
+
+free_places = 2
+
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(ir_pin, GPIO.IN)
+GPIO.setup(ir_pin_2, GPIO.IN)
 
 folder_path = "./licenses_plates_imgs_detected/"
 LICENSE_MODEL_DETECTION_DIR = './models/license_plate_detector.pt'
@@ -25,6 +33,7 @@ vehicles = [2]
 
 coco_model = YOLO(COCO_MODEL_DIR)
 license_plate_detector = YOLO(LICENSE_MODEL_DETECTION_DIR)
+print('pripravene')
 
 def read_license_plate(license_plate_crop, img):
     scores = 0
@@ -115,15 +124,32 @@ def model_prediction(img):
         img_wth_box = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return [img_wth_box]
 
+def sensor_detect():
+    while GPIO.input(ir_pin) == GPIO.LOW:
+        time.sleep(0.1)
+
+    if GPIO.input(ir_pin_2) == GPIO.LOW:
+        while GPIO.input(ir_pin_2) == GPIO.LOW:
+            time.sleep(0.1)
+        if GPIO.input(ir_pin) == GPIO.LOW:
+            print('odisiel')
+            return False
+        print('neni dement')
+        return True
+    else:
+        print('je dement')
+        return False
+
+obrazok_test = "spz.jpg"
+obrazok = "img.jpg"
 
 while True:
     f = open('csv_detections/detection_results.csv', "w+")
     f.close()
     
-    if GPIO.input(17) != GPIO.HIGH:
-        os.system('fswebcam -r 640x480 test_imgs/img.jpg')
-
-        img = np.array(Image.open("test_imgs/img.jpg"))
+    if GPIO.input(BUTTON_PIN) != GPIO.HIGH:
+        os.system(f'fswebcam -r 640x480 test_imgs/{obrazok}')
+        img = np.array(Image.open(f"test_imgs/{obrazok_test}"))
         results = model_prediction(img)
         if len(results) == 1:
             print('plate not detected')
@@ -139,6 +165,25 @@ while True:
             license_plate_score = csv_data[1][6]
             print(license_plate_text, license_plate_score)
 
-            while (GPIO.input(17) == GPIO.LOW):
+            while GPIO.input(ir_pin) == GPIO.HIGH:
+                time.sleep(0.5)
+                continue
+            
+            #skontrolovat kolko je volnych miest na parkovisku
+            if free_places > 0:
+                # 1. otvori rampu (cez servo)
+                print('brana sa otvorila')
+                # 2. kontrola ci presiel za druhy senzor
+                if sensor_detect():
+                    print('zapise sa do db')
+                    free_places -= 1
+                    print('branas sa zatvara')
+                else:
+                    print('dement sa rozhodol odist')
+            else:
+                print('parkovisko je plne')
+
+
+            while (GPIO.input(BUTTON_PIN) == GPIO.LOW):
                 print('pustito !')
             time.sleep(0.5)
