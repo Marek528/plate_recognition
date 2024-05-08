@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import cv2
 import easyocr
 import csv
-from util import write_csv
+from util import write_csv, update_table
 import uuid
 import os
 import av
@@ -15,13 +15,21 @@ ir_pin = 17
 ir_pin_2 = 27
 BUTTON_PIN = 22
 
-free_places = 2
+# treba nacitat z db
+free_places = 8
 
-GPIO.setwarnings(False)
+# GPIO.setwarnings(False)
+# GPIO.setmode(GPIO.BCM)
+# GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# GPIO.setup(ir_pin, GPIO.IN)
+# GPIO.setup(ir_pin_2, GPIO.IN)
+
+servo_pin = 18
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(ir_pin, GPIO.IN)
-GPIO.setup(ir_pin_2, GPIO.IN)
+GPIO.setup(servo_pin, GPIO.OUT)
+servo1 = GPIO.PWM(servo_pin, 50)
+#nastavi ho na 0
+servo1.start(7)
 
 folder_path = "./licenses_plates_imgs_detected/"
 LICENSE_MODEL_DETECTION_DIR = './models/license_plate_detector.pt'
@@ -33,7 +41,7 @@ vehicles = [2]
 
 coco_model = YOLO(COCO_MODEL_DIR)
 license_plate_detector = YOLO(LICENSE_MODEL_DETECTION_DIR)
-print('pripravene')
+print('ready')
 
 def read_license_plate(license_plate_crop, img):
     scores = 0
@@ -134,10 +142,10 @@ def sensor_detect():
         if GPIO.input(ir_pin) == GPIO.LOW:
             print('odisiel')
             return False
-        print('neni dement')
+        print('presiel cez zavoru')
         return True
     else:
-        print('je dement')
+        print('odisiel skor')
         return False
 
 obrazok_test = "spz.jpg"
@@ -149,7 +157,7 @@ while True:
     
     if GPIO.input(BUTTON_PIN) != GPIO.HIGH:
         os.system(f'fswebcam -r 640x480 test_imgs/{obrazok}')
-        img = np.array(Image.open(f"test_imgs/{obrazok_test}"))
+        img = np.array(Image.open(f"test_imgs/{obrazok}"))
         results = model_prediction(img)
         if len(results) == 1:
             print('plate not detected')
@@ -173,13 +181,15 @@ while True:
             if free_places > 0:
                 # 1. otvori rampu (cez servo)
                 print('brana sa otvorila')
+                servo1.ChangeDutyCycle(2+(180/18))
                 # 2. kontrola ci presiel za druhy senzor
                 if sensor_detect():
                     print('zapise sa do db')
                     free_places -= 1
-                    print('branas sa zatvara')
+                    print('brana sa zatvara')
+                    servo1.ChangeDutyCycle(2+(90/18))
                 else:
-                    print('dement sa rozhodol odist')
+                    print('rozhodol sa odist')
             else:
                 print('parkovisko je plne')
 

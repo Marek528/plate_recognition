@@ -1,6 +1,7 @@
 import easyocr
 import base64
 import streamlit as st
+import mysql.connector
 
 # Initialize the OCR reader
 reader = easyocr.Reader(['en'], gpu=False)
@@ -86,3 +87,12 @@ def read_license_plate(license_plate_crop):
 
     return None, None
 
+def update_table(sql_query, db='parkovisko1'):
+    conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database=db)
+    cursor = conn.cursor()
+    sql = sql_query
+    try:
+        cursor.execute(sql)
+        conn.commit()
+    except:
+        conn.rollback()
