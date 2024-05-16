@@ -1,7 +1,7 @@
 import easyocr
 import base64
 import streamlit as st
-import mysql.connector
+import mariadb
 
 # Initialize the OCR reader
 reader = easyocr.Reader(['en'], gpu=False)
@@ -87,12 +87,46 @@ def read_license_plate(license_plate_crop):
 
     return None, None
 
-def update_table(sql_query, db='parkovisko1'):
-    conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database=db)
-    cursor = conn.cursor()
-    sql = sql_query
+def update_table(sql_query, database='parkovisko'):
+    """
+    To db we can use SELECT, INSERT, DELETE commands
+    """
+    global conn
     try:
-        cursor.execute(sql)
-        conn.commit()
-    except:
-        conn.rollback()
+        conn = mariadb.connect(
+                user="zavora",
+                password="zavora123",
+                host="10.42.0.1",
+                port=3306,
+                database="parkovisko"
+        )
+    except mariadb.Error as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+    cur = conn.cursor()
+    cur.execute(sql_query)
+    conn.commit()
+    first_word = (sql_query.split())[0]
+    if first_word == 'SELECT':
+        return 0
+
+def check_spz(license_plate_text):
+    try:
+        conn = mariadb.connect(
+                user="zavora",
+                password="zavora123",
+                host="10.42.0.1",
+                port=3306,
+                database="parkovisko"
+        )
+    except mariadb.Error as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    
+    cur = conn.cursor()
+    cur.execute(f'SELECT * FROM parked_cars WHERE spz={license_plate_text}')
+    for spz in cur:
+        if spz[1] == '':
+            return ''
+        return spz[1]

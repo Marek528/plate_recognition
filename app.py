@@ -13,23 +13,26 @@ import time
 import RPi.GPIO as GPIO
 ir_pin = 17
 ir_pin_2 = 27
-BUTTON_PIN = 22
+# BUTTON_PIN = 22
 
 # treba nacitat z db
 free_places = 8
 
-# GPIO.setwarnings(False)
-# GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
 # GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-# GPIO.setup(ir_pin, GPIO.IN)
-# GPIO.setup(ir_pin_2, GPIO.IN)
+GPIO.setup(ir_pin, GPIO.IN)
+GPIO.setup(ir_pin_2, GPIO.IN)
 
+# brana setup
 servo_pin = 18
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(servo_pin, GPIO.OUT)
 servo1 = GPIO.PWM(servo_pin, 50)
 #nastavi ho na 0
 servo1.start(7)
+time.sleep(0.5)
+servo1.ChangeDutyCycle(0)
 
 folder_path = "./licenses_plates_imgs_detected/"
 LICENSE_MODEL_DETECTION_DIR = './models/license_plate_detector.pt'
@@ -148,15 +151,26 @@ def sensor_detect():
         print('odisiel skor')
         return False
 
+def servo_motor(angle):
+    servo1.ChangeDutyCycle(2+(angle/18))
+    time.sleep(0.5)
+    servo1.ChangeDutyCycle(0)
+
+def odfot(obrazok):
+    os.system(f'fswebcam -r 640x480 test_imgs/{obrazok}')
+    return
+
 obrazok_test = "spz.jpg"
 obrazok = "img.jpg"
+pocitadlo = 0
 
 while True:
     f = open('csv_detections/detection_results.csv', "w+")
     f.close()
     
-    if GPIO.input(BUTTON_PIN) != GPIO.HIGH:
-        os.system(f'fswebcam -r 640x480 test_imgs/{obrazok}')
+    if GPIO.input(ir_pin) != GPIO.HIGH and free_places > 0:
+        time.sleep(0.2)
+        odfot(obrazok)
         img = np.array(Image.open(f"test_imgs/{obrazok}"))
         results = model_prediction(img)
         if len(results) == 1:
@@ -169,31 +183,49 @@ while True:
             file = open('csv_detections/detection_results.csv')
             csv_reader = csv.reader(file)
             csv_data = list(csv_reader)
-            license_plate_text = csv_data[1][5]
+            try:
+                license_plate_text = csv_data[1][5]
+            except:
+                print('Nevie precitat znacku')
+                continue
             license_plate_score = csv_data[1][6]
             print(license_plate_text, license_plate_score)
 
             while GPIO.input(ir_pin) == GPIO.HIGH:
                 time.sleep(0.5)
+                pocitadlo += 1
+                if pocitadlo >= 10:
+                    break
                 continue
-            
+
+            if check_spz(license_plate_text) != '':
+                print('SPZ uz je zaevidovana')
+                continue
+                
             #skontrolovat kolko je volnych miest na parkovisku
-            if free_places > 0:
+            if pocitadlo < 10:
                 # 1. otvori rampu (cez servo)
                 print('brana sa otvorila')
-                servo1.ChangeDutyCycle(2+(180/18))
+                servo_motor(180)
                 # 2. kontrola ci presiel za druhy senzor
                 if sensor_detect():
                     print('zapise sa do db')
+                    update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
                     free_places -= 1
                     print('brana sa zatvara')
-                    servo1.ChangeDutyCycle(2+(90/18))
+                    time.sleep(1)
+                    servo_motor(90)
                 else:
                     print('rozhodol sa odist')
+                    servo_motor(90)
+
             else:
-                print('parkovisko je plne')
+                pocitadlo = 0
+                print('odisiel')
 
 
-            while (GPIO.input(BUTTON_PIN) == GPIO.LOW):
+            while (GPIO.input(ir_pin) == GPIO.LOW):
                 print('pustito !')
             time.sleep(0.5)
+    else:
+        print('parkovisko je plne')
