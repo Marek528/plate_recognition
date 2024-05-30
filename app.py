@@ -168,65 +168,151 @@ while True:
     f = open('csv_detections/detection_results.csv', "w+")
     f.close()
     
-    if GPIO.input(ir_pin) != GPIO.HIGH and free_places > 0:
-        time.sleep(0.2)
-        odfot(obrazok)
-        img = np.array(Image.open(f"test_imgs/{obrazok}"))
-        results = model_prediction(img)
-        if len(results) == 1:
-            print('plate not detected')
-            continue
-        else:
-            if results[-1] == 0:
-                print('Car was not detected')
-                continue
-            file = open('csv_detections/detection_results.csv')
-            csv_reader = csv.reader(file)
-            csv_data = list(csv_reader)
-            try:
-                license_plate_text = csv_data[1][5]
-            except:
-                print('Nevie precitat znacku')
-                continue
-            license_plate_score = csv_data[1][6]
-            print(license_plate_text, license_plate_score)
+    mod = 1
+    #mod = get_mode_db()
 
-            while GPIO.input(ir_pin) == GPIO.HIGH:
-                time.sleep(0.5)
-                pocitadlo += 1
-                if pocitadlo >= 10:
-                    break
-                continue
+    #mod - stale otvorena
+    if mod == 5:
+        print('brana sa otvorila')
+        servo_motor(180)
+        continue
+    
+    #prichod ku senzoru
+    if GPIO.input(ir_pin) != GPIO.HIGH:
 
-            if check_spz(license_plate_text) != '':
-                print('SPZ uz je zaevidovana')
-                continue
-                
-            #skontrolovat kolko je volnych miest na parkovisku
+        
+        if mod == 1:
+            #mod - otvorena pre vsetkych pokial je volne miesto
             free_places = free_places_db()
-            if pocitadlo < 10 and free_places > 0:
-                # 1. otvori rampu (cez servo)
-                print('brana sa otvorila')
-                servo_motor(180)
-                # 2. kontrola ci presiel za druhy senzor
-                if sensor_detect():
-                    print('zapise sa do db')
-                    update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
-                    free_places -= 1
-                    print('brana sa zatvara')
-                    time.sleep(1)
-                    servo_motor(90)
+            if free_places > 0:
+                time.sleep(0.3)
+                odfot(obrazok)
+                img = np.array(Image.open(f"test_imgs/{obrazok}"))
+                results = model_prediction(img)
+                if len(results) == 1:
+                    print('plate not detected')
+                    continue
                 else:
-                    print('rozhodol sa odist')
-                    servo_motor(90)
+                    if results[-1] == 0:
+                        print('Car was not detected')
+                        continue
+                    file = open('csv_detections/detection_results.csv')
+                    csv_reader = csv.reader(file)
+                    csv_data = list(csv_reader)
+                    try:
+                        license_plate_text = csv_data[1][5]
+                    except:
+                        print('Nevie precitat znacku')
+                        continue
+                    license_plate_score = csv_data[1][6]
+                    print(license_plate_text, license_plate_score)
 
+                    #kontrola pri nedokonalosti senzora alebo sa rozhodol odist zatial co sa robilo OCR
+                    while GPIO.input(ir_pin) == GPIO.HIGH:
+                        time.sleep(0.5)
+                        pocitadlo += 1
+                        if pocitadlo >= 10:
+                            break
+                        continue
+
+                    if check_spz(license_plate_text) != '':
+                        print('SPZ uz je zaevidovana (zrejme kvoli vypadku elektriny)')
+                        
+                    #skontrolovat kolko je volnych miest na parkovisku
+                    free_places = free_places_db()
+                    if pocitadlo < 10 and free_places > 0:
+                        # 1. otvori rampu (cez servo)
+                        print('brana sa otvorila')
+                        servo_motor(180)
+                        # 2. kontrola ci presiel za druhy senzor
+                        if sensor_detect():
+                            print('zapise sa do db')
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
+                            free_places -= 1
+                            print('brana sa zatvara')
+                            time.sleep(1)
+                            servo_motor(90)
+                        else:
+                            print('rozhodol sa odist')
+                            servo_motor(90)
+
+                    else:
+                        pocitadlo = 0
+                        print('odisiel')
+                    
+                    pocitadlo = 0
+
+
+                    while (GPIO.input(ir_pin) == GPIO.LOW):
+                        print('pustito !')
+                    time.sleep(0.5)
             else:
-                pocitadlo = 0
-                print('odisiel')
+                print('parkovisko je plne')
+        
+        elif mode == 2:
+            #mod 2 - otvara sa len pre povolene auta pokial nie je plne
+            free_places = free_places_db()
+            if free_places > 0:
+                time.sleep(0.3)
+                odfot(obrazok)
+                img = np.array(Image.open(f"test_imgs/{obrazok}"))
+                results = model_prediction(img)
+                if len(results) == 1:
+                    print('plate not detected')
+                    continue
+                else:
+                    if results[-1] == 0:
+                        print('Car was not detected')
+                        continue
+                    file = open('csv_detections/detection_results.csv')
+                    csv_reader = csv.reader(file)
+                    csv_data = list(csv_reader)
+                    try:
+                        license_plate_text = csv_data[1][5]
+                    except:
+                        print('Nevie precitat znacku')
+                        continue
+                    license_plate_score = csv_data[1][6]
+                    print(license_plate_text, license_plate_score)
+
+                    #kontrola pri nedokonalosti senzora alebo sa rozhodol odist zatial co sa robilo OCR
+                    while GPIO.input(ir_pin) == GPIO.HIGH:
+                        time.sleep(0.5)
+                        pocitadlo += 1
+                        if pocitadlo >= 10:
+                            break
+                        continue
+
+                    if check_spz(license_plate_text) != '':
+                        print('SPZ uz je zaevidovana (zrejme kvoli vypadku elektriny)')
+                        
+                    #skontrolovat kolko je volnych miest na parkovisku
+                    free_places = free_places_db()
+                    if pocitadlo < 10 and free_places > 0:
+                        # 1. otvori rampu (cez servo)
+                        print('brana sa otvorila')
+                        servo_motor(180)
+                        # 2. kontrola ci presiel za druhy senzor
+                        if sensor_detect():
+                            print('zapise sa do db')
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
+                            free_places -= 1
+                            print('brana sa zatvara')
+                            time.sleep(1)
+                            servo_motor(90)
+                        else:
+                            print('rozhodol sa odist')
+                            servo_motor(90)
+
+                    else:
+                        pocitadlo = 0
+                        print('odisiel')
+                    
+                    pocitadlo = 0
 
 
-            while (GPIO.input(ir_pin) == GPIO.LOW):
-                print('pustito !')
-            time.sleep(0.5)
-    else:
-        print('parkovisko je plne')
+                    while (GPIO.input(ir_pin) == GPIO.LOW):
+                        print('pustito !')
+                    time.sleep(0.5)
+            else:
+                print('parkovisko je plne')

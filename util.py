@@ -58,35 +58,6 @@ def write_csv(results, output_path):
                             )
         f.close()
 
-def read_license_plate(license_plate_crop):
-    """
-    Read the license plate text from the given cropped image.
-
-    Args:
-        license_plate_crop (PIL.Image.Image): Cropped image containing the license plate.
-
-    Returns:
-        tuple: Tuple containing the formatted license plate text and its confidence score.
-    """
-
-    detections = reader.readtext(license_plate_crop)
-
-    if detections == [] :
-        return None, None
-
-    for detection in detections:
-        bbox, text, score = detection
-
-        #text = text.upper().replace(' ', '')
-        text = text.upper()
-
-        if text is not None and score is not None and bbox is not None and len(text) >= 6:
-        #if license_complies_format(text):
-        #    return format_license(text), score
-            return text, score
-
-    return None, None
-
 def connect_db():
     """
     To db we can use SELECT, INSERT, DELETE commands
@@ -130,6 +101,24 @@ def free_places_db():
     cur = conn.cursor()
     cur.execute('SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
     for i in cur:
-        if i[1] == '':
-            return ''
-        return i[1]
+        return i[0]
+
+
+# ziskanie modu z databazy
+# def get_mode_db():
+#     connect_db()
+
+#     cur = conn.cursor()
+#     cur.execute('SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
+#     for i in cur:
+#         return i[0]
+
+def check_allowed_car(license_plate_text):
+    global conn
+    connect_db()
+    
+    cur = conn.cursor()
+    cur.execute(f'SELECT COUNT(*) FROM allowed_cars WHERE spz={license_plate_text}')
+    print(cur)
+    
+#check_allowed_car('KM999BA')
