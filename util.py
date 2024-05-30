@@ -87,11 +87,10 @@ def read_license_plate(license_plate_crop):
 
     return None, None
 
-def update_table(sql_query, database='parkovisko'):
+def connect_db():
     """
     To db we can use SELECT, INSERT, DELETE commands
     """
-    global conn
     try:
         conn = mariadb.connect(
                 user="zavora",
@@ -103,6 +102,10 @@ def update_table(sql_query, database='parkovisko'):
     except mariadb.Error as e:
             print(f"Error: {e}")
             sys.exit(1)
+
+def update_table(sql_query):
+    global conn
+    connect_db()
 
     cur = conn.cursor()
     cur.execute(sql_query)
@@ -112,17 +115,7 @@ def update_table(sql_query, database='parkovisko'):
         return 0
 
 def check_spz(license_plate_text):
-    try:
-        conn = mariadb.connect(
-                user="zavora",
-                password="zavora123",
-                host="10.42.0.1",
-                port=3306,
-                database="parkovisko"
-        )
-    except mariadb.Error as e:
-            print(f"Error: {e}")
-            sys.exit(1)
+    connect_db()
     
     cur = conn.cursor()
     cur.execute(f'SELECT * FROM parked_cars WHERE spz={license_plate_text}')
@@ -130,3 +123,13 @@ def check_spz(license_plate_text):
         if spz[1] == '':
             return ''
         return spz[1]
+
+def free_places_db():
+    connect_db()
+    
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
+    for i in cur:
+        if i[1] == '':
+            return ''
+        return i[1]

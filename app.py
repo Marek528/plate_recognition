@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import cv2
 import easyocr
 import csv
-from util import write_csv, update_table
+from util import write_csv, update_table, check_spz, free_places_db
 import uuid
 import os
 import av
@@ -16,7 +16,7 @@ ir_pin_2 = 27
 # BUTTON_PIN = 22
 
 # treba nacitat z db
-free_places = 8
+free_places = 0
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -203,7 +203,8 @@ while True:
                 continue
                 
             #skontrolovat kolko je volnych miest na parkovisku
-            if pocitadlo < 10:
+            free_places = free_places_db()
+            if pocitadlo < 10 and free_places > 0:
                 # 1. otvori rampu (cez servo)
                 print('brana sa otvorila')
                 servo_motor(180)
