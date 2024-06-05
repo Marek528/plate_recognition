@@ -6,6 +6,9 @@ import mariadb
 # Initialize the OCR reader
 reader = easyocr.Reader(['en'], gpu=False)
 
+
+parking_house_id = 1
+
 # Mapping dictionaries for character conversion
 dict_char_to_int = {'O': '0',
                     'I': '1',
@@ -99,19 +102,19 @@ def free_places_db():
     connect_db()
     
     cur = conn.cursor()
-    cur.execute('SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
+    cur.execute(f'SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
     for i in cur:
         return i[0]
 
 
 # ziskanie modu z databazy
-# def get_mode_db():
-#     connect_db()
+def get_mode_db():
+    connect_db()
 
-#     cur = conn.cursor()
-#     cur.execute('SELECT COUNT(occupied) FROM parking_slots WHERE occupied=0')
-#     for i in cur:
-#         return i[0]
+    cur = conn.cursor()
+    cur.execute(f'SELECT mode FROM parking_houses WHERE id={parking_house_id}')
+    for i in cur:
+        return i[0]
 
 def check_allowed_car(license_plate_text):
     global conn
@@ -120,5 +123,9 @@ def check_allowed_car(license_plate_text):
     cur = conn.cursor()
     cur.execute(f'SELECT COUNT(*) FROM allowed_cars WHERE spz={license_plate_text}')
     print(cur)
+    if int(cur) > 0:
+        return 1
+    else:
+        return 0
     
 #check_allowed_car('KM999BA')

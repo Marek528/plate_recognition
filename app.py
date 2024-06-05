@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import cv2
 import easyocr
 import csv
-from util import write_csv, update_table, check_spz, free_places_db
+from util import check_allowed_car, get_mode_db, write_csv, update_table, check_spz, free_places_db
 import uuid
 import os
 import av
@@ -17,6 +17,8 @@ ir_pin_2 = 27
 
 # treba nacitat z db
 free_places = 0
+
+parking_house_id = 1
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -169,14 +171,8 @@ while True:
     f.close()
     
     mod = 1
-    #mod = get_mode_db()
+    mod = get_mode_db()
 
-    #mod - stale otvorena
-    if mod == 5:
-        print('brana sa otvorila')
-        servo_motor(180)
-        continue
-    
     #prichod ku senzoru
     if GPIO.input(ir_pin) != GPIO.HIGH:
 
@@ -227,7 +223,7 @@ while True:
                         # 2. kontrola ci presiel za druhy senzor
                         if sensor_detect():
                             print('zapise sa do db')
-                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
                             free_places -= 1
                             print('brana sa zatvara')
                             time.sleep(1)
@@ -249,7 +245,7 @@ while True:
             else:
                 print('parkovisko je plne')
         
-        elif mode == 2:
+        elif mod == 2:
             #mod 2 - otvara sa len pre povolene auta pokial nie je plne
             free_places = free_places_db()
             if free_places > 0:
@@ -286,16 +282,21 @@ while True:
                     if check_spz(license_plate_text) != '':
                         print('SPZ uz je zaevidovana (zrejme kvoli vypadku elektriny)')
                         
-                    #skontrolovat kolko je volnych miest na parkovisku
+                    #skontrolovat kolko je volnych miest na parkovisku a ci ma znacka povolene parkovanie
                     free_places = free_places_db()
-                    if pocitadlo < 10 and free_places > 0:
+                    kontrola = check_allowed_car(license_plate_text)
+
+                    
+
+
+                    if pocitadlo < 10 and free_places > 0 and kontrola:
                         # 1. otvori rampu (cez servo)
                         print('brana sa otvorila')
                         servo_motor(180)
                         # 2. kontrola ci presiel za druhy senzor
                         if sensor_detect():
                             print('zapise sa do db')
-                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at) VALUES ('{license_plate_text}', now(), now())")
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
                             free_places -= 1
                             print('brana sa zatvara')
                             time.sleep(1)
@@ -306,7 +307,7 @@ while True:
 
                     else:
                         pocitadlo = 0
-                        print('odisiel')
+                        print('odisiel alebo nema povoleny prejazd')
                     
                     pocitadlo = 0
 
@@ -316,3 +317,10 @@ while True:
                     time.sleep(0.5)
             else:
                 print('parkovisko je plne')
+        
+        elif mod == 3:
+            #mod 3 - brana bude neustale otvorena
+            servo_motor(180)
+        elif mod == 4:
+            #mod 4 - brana bude neustale zatvorena
+            servo_motor(90)
