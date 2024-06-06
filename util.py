@@ -3,10 +3,6 @@ import base64
 import streamlit as st
 import mariadb
 
-# Initialize the OCR reader
-reader = easyocr.Reader(['en'], gpu=False)
-
-
 parking_house_id = 1
 
 # Mapping dictionaries for character conversion
@@ -62,6 +58,7 @@ def write_csv(results, output_path):
         f.close()
 
 def connect_db():
+    global conn
     """
     To db we can use SELECT, INSERT, DELETE commands
     """
@@ -92,7 +89,7 @@ def check_spz(license_plate_text):
     connect_db()
     
     cur = conn.cursor()
-    cur.execute(f'SELECT * FROM parked_cars WHERE spz={license_plate_text}')
+    cur.execute(f'SELECT * FROM parked_cars WHERE spz="{license_plate_text}"')
     for spz in cur:
         if spz[1] == '':
             return ''
@@ -112,7 +109,7 @@ def get_mode_db():
     connect_db()
 
     cur = conn.cursor()
-    cur.execute(f'SELECT mode FROM parking_houses WHERE id={parking_house_id}')
+    cur.execute(f'SELECT mode FROM parking_houses WHERE id="{parking_house_id}"')
     for i in cur:
         return i[0]
 
@@ -121,11 +118,14 @@ def check_allowed_car(license_plate_text):
     connect_db()
     
     cur = conn.cursor()
-    cur.execute(f'SELECT COUNT(*) FROM allowed_cars WHERE spz={license_plate_text}')
-    print(cur)
-    if int(cur) > 0:
-        return 1
-    else:
-        return 0
-    
-#check_allowed_car('KM999BA')
+    cur.execute(f'SELECT COUNT(*) FROM allowed_cars WHERE spz="{license_plate_text}"')
+    for i in cur:
+        if int(i[0]) > 0:
+            print('1')
+            return 1
+        else:
+            print('0')
+            return 0
+
+if __name__ == "__main__":
+    check_allowed_car('CA644BC')

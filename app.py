@@ -171,25 +171,30 @@ while True:
     f.close()
     
     mod = 1
-    mod = get_mode_db()
+    # mod = get_mode_db()
 
     #prichod ku senzoru
+    # orange led
     if GPIO.input(ir_pin) != GPIO.HIGH:
 
         
         if mod == 1:
             #mod - otvorena pre vsetkych pokial je volne miesto
+            #yell led
             free_places = free_places_db()
             if free_places > 0:
+                #white led
                 time.sleep(0.3)
                 odfot(obrazok)
                 img = np.array(Image.open(f"test_imgs/{obrazok}"))
                 results = model_prediction(img)
                 if len(results) == 1:
+                    #yell led
                     print('plate not detected')
                     continue
                 else:
                     if results[-1] == 0:
+                        #yell led
                         print('Car was not detected')
                         continue
                     file = open('csv_detections/detection_results.csv')
@@ -197,7 +202,9 @@ while True:
                     csv_data = list(csv_reader)
                     try:
                         license_plate_text = csv_data[1][5]
+                        license_plate_text.replace(" ", "")
                     except:
+                        #yell led
                         print('Nevie precitat znacku')
                         continue
                     license_plate_score = csv_data[1][6]
@@ -218,21 +225,26 @@ while True:
                     free_places = free_places_db()
                     if pocitadlo < 10 and free_places > 0:
                         # 1. otvori rampu (cez servo)
+                        #green led
                         print('brana sa otvorila')
                         servo_motor(180)
                         # 2. kontrola ci presiel za druhy senzor
                         if sensor_detect():
-                            print('zapise sa do db')
-                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
-                            free_places -= 1
                             print('brana sa zatvara')
                             time.sleep(1)
                             servo_motor(90)
+                            #yell led
+                            print('zapise sa do db')
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
+                            free_places -= 1
+                            #orange led
                         else:
+                            #orange led
                             print('rozhodol sa odist')
                             servo_motor(90)
 
                     else:
+                        #orange led
                         pocitadlo = 0
                         print('odisiel')
                     
@@ -240,24 +252,30 @@ while True:
 
 
                     while (GPIO.input(ir_pin) == GPIO.LOW):
+                        # red led
                         print('pustito !')
                     time.sleep(0.5)
             else:
+                #red led
                 print('parkovisko je plne')
         
         elif mod == 2:
             #mod 2 - otvara sa len pre povolene auta pokial nie je plne
+            #yell led
             free_places = free_places_db()
             if free_places > 0:
+                # white led
                 time.sleep(0.3)
                 odfot(obrazok)
                 img = np.array(Image.open(f"test_imgs/{obrazok}"))
                 results = model_prediction(img)
                 if len(results) == 1:
+                    #yell led
                     print('plate not detected')
                     continue
                 else:
                     if results[-1] == 0:
+                        #yell led
                         print('Car was not detected')
                         continue
                     file = open('csv_detections/detection_results.csv')
@@ -265,7 +283,9 @@ while True:
                     csv_data = list(csv_reader)
                     try:
                         license_plate_text = csv_data[1][5]
+                        license_plate_text.replace(" ", "")
                     except:
+                        #yell led
                         print('Nevie precitat znacku')
                         continue
                     license_plate_score = csv_data[1][6]
@@ -286,26 +306,28 @@ while True:
                     free_places = free_places_db()
                     kontrola = check_allowed_car(license_plate_text)
 
-                    
-
-
                     if pocitadlo < 10 and free_places > 0 and kontrola:
                         # 1. otvori rampu (cez servo)
+                        # green led
                         print('brana sa otvorila')
                         servo_motor(180)
                         # 2. kontrola ci presiel za druhy senzor
                         if sensor_detect():
-                            print('zapise sa do db')
-                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
-                            free_places -= 1
                             print('brana sa zatvara')
                             time.sleep(1)
                             servo_motor(90)
+                            #yell led
+                            print('zapise sa do db')
+                            update_table(f"INSERT INTO parked_cars (spz, created_at, updated_at, parking_house_id) VALUES ('{license_plate_text}', now(), now(), '{parking_house_id}')")
+                            free_places -= 1
+                            #orange led
                         else:
+                            #orange led
                             print('rozhodol sa odist')
                             servo_motor(90)
 
                     else:
+                        #orange led
                         pocitadlo = 0
                         print('odisiel alebo nema povoleny prejazd')
                     
@@ -313,9 +335,11 @@ while True:
 
 
                     while (GPIO.input(ir_pin) == GPIO.LOW):
+                        #red led
                         print('pustito !')
                     time.sleep(0.5)
             else:
+                #red led
                 print('parkovisko je plne')
         
         elif mod == 3:
