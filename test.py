@@ -8,25 +8,46 @@ blue_pin = 13
 GPIO.setup(red_pin, GPIO.OUT)# set GPIO 17 as output for white led  
 GPIO.setup(green_pin, GPIO.OUT)# set GPIO 27 as output for red led  
 GPIO.setup(blue_pin, GPIO.OUT)# set GPIO 22 as output for red led
-  
-hz = int(input('Please define the frequency in Herz(recommended:75): '))
-reddc = int(input('Please define the red LED Duty Cycle: '))
-greendc = int(input('Please define the green LED Duty Cycle: '))
-bluedc = int(input('Please define the blue LED Duty Cycle: '))
+
+hz = 75
 
 red = GPIO.PWM(red_pin, hz)    # create object red for PWM on port 17  
 green = GPIO.PWM(green_pin, hz)      # create object green for PWM on port 27   
 blue = GPIO.PWM(blue_pin, hz)      # create object blue for PWM on port 22 
 
-try:   
-    while True:
-        red.start((reddc/2.55))   #start red led
-        green.start((greendc/2.55)) #start green led
-        blue.start((bluedc/2.55))  #start blue led
- 
-except KeyboardInterrupt:
-        red.stop()   #stop red led
-        green.stop() #stop green led
-        blue.stop()  #stop blue led
-  
-        GPIO.cleanup()          # clean up GPIO on CTRL+C exit
+
+def change_color(color):
+    if color == 1:
+        #cakaj (oranzova)
+        reddc = 255
+        greendc = 150
+        bluedc = 0
+
+    elif color == 2:
+        #databaza (modra)
+        reddc = 0
+        greendc = 0
+        bluedc = 255
+
+    elif color == 3:
+        #fotenie (biela)
+        reddc = 255
+        greendc = 255
+        bluedc = 255
+
+    elif color == 4:
+        #otvorenie brany (zelena)
+        reddc = 0
+        greendc = 0
+        bluedc = 0
+    elif color == 5:
+        #opustit priestor (cervena)
+        reddc = 255
+        greendc = 0
+        bluedc = 0
+    
+
+    red.start((reddc/2.55))   #start red led
+    green.start((greendc/2.55)) #start green led
+    blue.start((bluedc/2.55))  #start blue led
+    
