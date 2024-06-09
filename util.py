@@ -5,6 +5,8 @@ import mariadb
 
 parking_house_id = 1
 
+znacky =['AUDI TT']
+
 # Mapping dictionaries for character conversion
 dict_char_to_int = {'O': '0',
                     'I': '1',
@@ -111,7 +113,14 @@ def get_mode_db():
     cur = conn.cursor()
     cur.execute(f'SELECT mode FROM parking_houses WHERE id="{parking_house_id}"')
     for i in cur:
-        return i[0]
+        if i[0] == "allowed":
+            return 2
+        elif i[0] == "everyone":
+            return 1
+        elif i[0] == "open":
+            return 3
+        elif i[0] == "closed":
+            return 4
 
 def check_allowed_car(license_plate_text):
     global conn
@@ -127,5 +136,10 @@ def check_allowed_car(license_plate_text):
             print('0')
             return 0
 
-if __name__ == "__main__":
-    check_allowed_car('CA644BC')
+def check_allowed_car_2(license_plate_text):
+    if license_plate_text in znacky:
+        print('1')
+        return 1
+    else:
+        print('0')
+        return 0

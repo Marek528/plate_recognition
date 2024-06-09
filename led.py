@@ -1,9 +1,10 @@
 import RPi.GPIO as GPIO   
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)  # choose BCM numbering scheme.  
 
-red_pin = 26
+red_pin = 13
 green_pin = 19
-blue_pin = 13
+blue_pin = 26
   
 GPIO.setup(red_pin, GPIO.OUT)# set GPIO 17 as output for white led  
 GPIO.setup(green_pin, GPIO.OUT)# set GPIO 27 as output for red led  
@@ -38,7 +39,7 @@ def change_color(color):
     elif color == 4:
         #otvorenie brany (zelena)
         reddc = 0
-        greendc = 0
+        greendc = 255
         bluedc = 0
     elif color == 5:
         #opustit priestor (cervena)
