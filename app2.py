@@ -10,6 +10,12 @@ import uuid
 import os
 import av
 import time
+
+# mqtt setup
+import paho.mqtt.client as mqtt
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client.connect("10.42.0.1", 1883, 60)
+
 # settings for button
 import RPi.GPIO as GPIO
 ir_pin = 17
@@ -237,6 +243,7 @@ while True:
                         servo_motor(90)
                         print('vymaze sa z db')
                         update_table(f"DELETE FROM parked_cars WHERE spz = '{license_plate_text}'")
+                        client.publish("web/change", "car")
                     else:
                         #red led
                         change_color(5)
